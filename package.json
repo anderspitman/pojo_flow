@@ -1,0 +1,27 @@
+{
+  "name": "pojo-flow",
+  "version": "0.1.0",
+  "description": "JavaScript data flow",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anderspitman/pojo_flow.git"
+  },
+  "author": "Anders Pitman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anderspitman/pojo_flow/issues"
+  },
+  "homepage": "https://github.com/anderspitman/pojo_flow#readme",
+  "dependencies": {
+    "deep-diff": "^1.0.1",
+    "ws": "^5.2.2"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0"
+  }
+}
