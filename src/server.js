@@ -26,11 +26,11 @@ class PojoFlowServer {
 
   update(newData) {
 
-    const diff = deepDiff(this._prevData, newData, []);
+    //const diff = deepDiff(this._prevData, newData, []);
 
-    const updateList = buildUpdateList(diff);
+    //const updateList = buildUpdateList(diff);
 
-    const update = buildUpdate(diff);
+    //const update = buildUpdate(diff);
 
     
     //if (i % 100 === 0) {
