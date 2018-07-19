@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 const deepDiff = require('deep-diff');
 
-let i = 0;
+//let i = 0;
 
 class PojoFlowServer {
   constructor() {
@@ -33,16 +33,16 @@ class PojoFlowServer {
     const update = buildUpdate(diff);
 
     
-    if (i % 100 === 0) {
-      console.log(JSON.stringify(update, null, 2));
-      console.log(
-        JSON.stringify(newData).length,
-        JSON.stringify(diff).length,
-        JSON.stringify(updateList).length,
-        JSON.stringify(update).length,
-      );
-    }
-    i++;
+    //if (i % 100 === 0) {
+    //  console.log(JSON.stringify(update, null, 2));
+    //  console.log(
+    //    JSON.stringify(newData).length,
+    //    JSON.stringify(diff).length,
+    //    JSON.stringify(updateList).length,
+    //    JSON.stringify(update).length,
+    //  );
+    //}
+    //i++;
 
     this._wss.clients.forEach(function(client) {
       if (client.readyState === WebSocket.OPEN) {
