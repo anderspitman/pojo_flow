@@ -1,7 +1,21 @@
 class PojoFlowClient {
-  constructor() {
-    const hostname = window.location.hostname;
-    const websocketPort = 10000;
+  constructor(options = {}) {
+
+    let hostname;
+    if (options.host !== undefined) {
+      hostname = options.host;
+    }
+    else {
+      hostname = window.location.hostname;
+    }
+
+    let websocketPort;
+    if (options.port !== undefined) {
+      websocketPort = options.port;
+    }
+    else {
+      websocketPort = 10000;
+    }
     const websocketString = "ws://" + hostname + ":" + websocketPort;
 
     this._ws = new WebSocket(websocketString);
