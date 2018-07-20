@@ -1,6 +1,95 @@
 const assert = require('assert');
 const { expect } = require('chai');
 const { objectDiff } = require('../src/diff');
+const {
+  buildDiffUpdate,
+  buildUpdateSchema,
+  applyUpdate
+} = require('../src/server');
+
+describe('buildDiffUpdate', function() {
+  describe("simple", function() {
+    it("add", function() {
+      expect(buildDiffUpdate({}, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("edit", function() {
+      expect(buildDiffUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("delete", function() {
+      expect(buildDiffUpdate({ x: 1 }, {})).to.eql({ x: null })
+    })
+  })
+
+  describe("array", function() {
+    //it("add", function() {
+    //  const exp = {
+    //    x: [0, 1]
+    //  };
+    //  expect(buildDiffUpdate({ x: [0] }, { x: [0, 1] })).to.eql(exp)
+    //})
+
+    //it("edit", function() {
+    //  const exp = {
+    //    x: {
+    //      0: 2
+    //    }
+    //  };
+    //  expect(buildDiffUpdate({ x: [] }, { x: [2] })).to.eql(exp)
+    //})
+
+    //it("delete", function() {
+    //  const exp = {
+    //    x: {
+    //      0: null
+    //    }
+    //  };
+    //  expect(buildDiffUpdate({ x: [1] }, { x: [] })).to.eql(exp)
+    //})
+  })
+});
+
+describe('applyUpdate', function() {
+  describe("simple", function() {
+    it("add", function() {
+      expect(applyUpdate({ x: 1 }, {})).to.eql({ x: 1 })
+    })
+
+    it("edit", function() {
+      expect(applyUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 1 })
+    })
+
+    it("delete", function() {
+      expect(applyUpdate({ x: null }, { x: 2 })).to.eql({})
+    })
+  })
+
+  describe("nested", function() {
+    it("add", function() {
+      expect(applyUpdate({ x: { y: 1 } }, {})).to.eql({ x: { y: 1 } })
+    })
+
+    it("edit", function() {
+      expect(applyUpdate({ x: { y: 2 } }, { x: { y: 1 } }))
+        .to.eql({ x: { y: 2 } })
+    })
+
+    it("delete inner", function() {
+      expect(applyUpdate({ x: { y: null } }, { x: { y: 1 } })).to.eql({})
+    })
+
+    it("delete outer", function() {
+      expect(applyUpdate({ x: null }, { x: { y: 1 } })).to.eql({})
+    })
+  })
+
+  //describe("arrays", function() {
+  //  it("add", function() {
+  //    expect(applyUpdate({ x: [1] }, {})).to.eql({ x: [1] })
+  //  })
+  //})
+})
 
 describe('diff', function() {
   describe('objectDiff', function() {
@@ -75,3 +164,126 @@ describe('diff', function() {
     // TODO: different types
   });
 });
+
+describe('buildUpdateSchema', function() {
+  describe('no changes', function() {
+
+    it("both empty", function() {
+      expect(buildUpdateSchema({}, {})).to.eql({})
+    })
+
+    it("simple value", function() {
+      expect(buildUpdateSchema({ x: 1 }, { x: 1 })).to.eql({})
+    })
+
+    it("array value", function() {
+      expect(buildUpdateSchema({ x: [1] }, { x: [1] })).to.eql({})
+    })
+
+    it("array multiple values", function() {
+      expect(buildUpdateSchema({ x: [1, 2] }, { x: [1, 2] })).to.eql({})
+    })
+
+    it("simple nested", function() {
+      expect(buildUpdateSchema({ x: { y: 1 } }, { x: { y: 1 } })).to.eql({})
+    })
+  })
+
+  describe('simple', function() {
+
+    it("both empty", function() {
+      expect(buildUpdateSchema({}, {})).to.eql({})
+    })
+
+    it("add", function() {
+      expect(buildUpdateSchema({}, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("edit", function() {
+      expect(buildUpdateSchema({ x: 1 }, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("delete", function() {
+      expect(buildUpdateSchema({ x: 1 }, {})).to.eql({ x: null })
+    })
+  })
+
+  describe('siblings not affected', function() {
+
+    it("add", function() {
+      expect(buildUpdateSchema({ x: 1 }, { x: 1, y: 1 }))
+        .to.eql({ y: 1 })
+    })
+
+    it("edit", function() {
+      expect(buildUpdateSchema({ x: 1 }, { x: 2, y: 1 }))
+        .to.eql({ x: 2, y: 1 })
+    })
+
+    it("delete", function() {
+      expect(buildUpdateSchema({ x: 1, y: 2 }, { x: 1 }))
+        .to.eql({ y: null })
+    })
+  })
+
+  describe('arrays', function() {
+
+    it("add empty", function() {
+      expect(buildUpdateSchema({}, { x: [] })).to.eql({ x: [] })
+    })
+
+    it("add with value", function() {
+      expect(buildUpdateSchema({}, { x: [1] })).to.eql({ x: [1] })
+    })
+
+    it("add with multiple values", function() {
+      expect(buildUpdateSchema({}, { x: [1, 2] })).to.eql({ x: [1, 2] })
+    })
+
+    // TODO: watch out for this
+    it("edit", function() {
+      expect(buildUpdateSchema({ x: [1] }, { x: [2] }))
+        .to.eql({ x: { 0: 2 } })
+    })
+
+    it("delete empty", function() {
+      expect(buildUpdateSchema({ x: [] }, {})).to.eql({ x: null })
+    })
+
+    it("delete with value", function() {
+      expect(buildUpdateSchema({ x: [1] }, {})).to.eql({ x: null })
+    })
+
+    it("delete value", function() {
+      expect(buildUpdateSchema({ x: [1] }, { x: [] }))
+        .to.eql({ x: { 0: null } })
+    })
+  })
+
+  describe('nested', function() {
+
+    it("add empty", function() {
+      expect(buildUpdateSchema({}, { x: {} })).to.eql({ x: {} })
+    })
+
+    it("add with value", function() {
+      expect(buildUpdateSchema({}, { x: { y: 1 } })).to.eql({ x: { y: 1 } })
+    })
+
+    it("add inner value", function() {
+      expect(buildUpdateSchema({ x: { y: 1 } }, { x: { y: 1 , z: 2 } }))
+        .to.eql({ x: { z: 2 } })
+    })
+
+    it("delete inner", function() {
+      expect(buildUpdateSchema({ x: { y: 1 } }, { x: {} }))
+        .to.eql({ x: { y: null } })
+    })
+
+    it("delete outer", function() {
+      expect(buildUpdateSchema({ x: { y: 1 } }, {}))
+        .to.eql({ x: null })
+    })
+  })
+})
+

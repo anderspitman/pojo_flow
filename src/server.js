@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 const deepDiff = require('deep-diff');
 
-//let i = 0;
+let i = 0;
 
 class PojoFlowServer {
   constructor() {
@@ -26,23 +26,23 @@ class PojoFlowServer {
 
   update(newData) {
 
-    //const diff = deepDiff(this._prevData, newData, []);
-
-    //const updateList = buildUpdateList(diff);
-
-    //const update = buildUpdate(diff);
-
+    const diff = deepDiff(this._prevData, newData, []);
+    const updateList = buildUpdateList(diff);
+    const update = buildUpdate(diff);
+    const updateSchema = buildUpdateSchema(this._prevData, newData);
     
-    //if (i % 100 === 0) {
-    //  console.log(JSON.stringify(update, null, 2));
-    //  console.log(
-    //    JSON.stringify(newData).length,
-    //    JSON.stringify(diff).length,
-    //    JSON.stringify(updateList).length,
-    //    JSON.stringify(update).length,
-    //  );
-    //}
-    //i++;
+    if (i % 10 === 0) {
+      printObj(update);
+      printObj(updateSchema);
+      console.log(
+        JSON.stringify(newData).length,
+        JSON.stringify(diff).length,
+        JSON.stringify(updateList).length,
+        JSON.stringify(update).length,
+        JSON.stringify(updateSchema).length,
+      );
+    }
+    i++;
 
     this._wss.clients.forEach(function(client) {
       if (client.readyState === WebSocket.OPEN) {
@@ -73,18 +73,31 @@ function buildUpdateList(diff) {
     switch(change.kind) {
       case 'E':
         updateList.push({
+          t: 'E',
           p: change.path,
           v: change.rhs,
         });
         break;
       case 'D':
+        updateList.push({
+          t: 'D',
+          p: change.path,
+        });
         break;
       case 'A':
         updateList.push({
+          t: 'A',
           p: change.path,
           i: change.index,
           // TODO: account for nested rhs
           v: change.item,
+        });
+        break;
+      case 'N':
+        updateList.push({
+          t: 'N',
+          p: change.path,
+          v: change.rhs,
         });
         break;
       default:
@@ -96,25 +109,42 @@ function buildUpdateList(diff) {
   return updateList;
 }
 
-function buildUpdate(diff) {
+function buildDiffUpdate(a, b) {
+  const diff = deepDiff(a, b);
+  return buildUpdate(diff);
+}
+
+function buildUpdate(diff, parentPath) {
   const update = {};
 
   for (let change of diff) {
-    //console.log(change);
+
+    let path;
+    if (change.path !== undefined) {
+      path = change.path;
+    }
+    else if (parentPath !== undefined ) {
+      path = parentPath;
+    }
+    else {
+      throw "Invalid path";
+    }
+
     switch(change.kind) {
       case 'E':
-        if (change.path) {
-          setValue(update, change.path, change.rhs);
-        }
+        setValue(update, path, change.rhs);
         break;
       case 'D':
-        //console.log(JSON.stringify(change, null, 2));
+        setValue(update, path, null);
         break;
       case 'A':
-        //console.log(JSON.stringify(change, null, 2));
-        setValue(update, change.path, buildUpdate([change.item]));
+        const subChange = buildUpdate([change.item], [change.index]);
+
+        //printObj(subChange);
+        setValue(update, path, subChange);
         break;
       case 'N':
+        setValue(update, path, change.rhs);
         break;
       default:
         throw "Invalid change kind " + change.kind;
@@ -123,6 +153,94 @@ function buildUpdate(diff) {
   }
 
   return update;
+}
+
+function buildUpdateSchema(a, b) {
+
+  const path = [];
+  const update = {};
+
+  return buildUpdateSchemaIter(a, b, update, path);
+}
+
+function buildUpdateSchemaIter(a, b, update, path) {
+
+  //console.log(a, b, update, path);
+
+  for (let key in b) {
+
+    const newPath = path.concat(key);
+
+    if (a[key] === undefined) {
+      update[key] = b[key];
+    }
+    else {
+      if (b[key] instanceof Array || b[key] instanceof Object) {
+        const subUpdate = buildUpdateSchema(a[key], b[key], update, newPath);
+
+        // check if empty
+        if (Object.keys(subUpdate).length > 0) {
+          update[key] = subUpdate;
+        }
+      }
+      else {
+        if (b[key] !== a[key]) {
+          update[key] = b[key];
+        }
+      }
+    }
+  }
+
+  // TODO: this can maybe be more efficient by calculating the intersection
+  // and union of the sets of keys between a and b
+  for (let key in a) {
+    const newPath = path.concat(key);
+
+    if (b[key] === undefined) {
+      update[key] = null;
+    }
+  }
+
+  return update;
+}
+
+function isPrimitiveType(valueType) {
+  return valueType === 'number' ||
+    valueType === 'string' ||
+    valueType === 'boolean';
+}
+
+function applyUpdate(update, obj, parent, parentKey) {
+  //console.log(update, obj);
+
+  for (let key in update) {
+    // TODO: wat: typeof null === 'object'??
+    if (typeof update[key] !== 'object' || update[key] === null) {
+      //console.log(update, obj, key);
+      if (update[key] === null) {
+        delete obj[key];
+
+        // if this object is now empty from the previous removal, remove it
+        // from its parent
+        if (parent !== undefined && parentKey !== undefined) {
+          if (Object.keys(obj).length === 0) {
+            delete parent[parentKey];
+          }
+        }
+      }
+      else {
+        obj[key] = update[key];
+      }
+    }
+    else {
+      if (obj[key] === undefined) {
+        obj[key] = {};
+      }
+      applyUpdate(update[key], obj[key], obj, key);
+    }
+  }
+
+  return obj;
 }
 
 function setValue(obj, path, value) {
@@ -140,6 +258,17 @@ function setValue(obj, path, value) {
   setValue(obj[key], path.slice(1), value);
 }
 
+function setArrayValue(obj, path, value) {
+}
+
+function printObj(obj) {
+  console.log(JSON.stringify(obj, null, 2));
+}
+
 module.exports = {
   PojoFlowServer,
+  buildUpdate,
+  buildDiffUpdate,
+  applyUpdate,
+  buildUpdateSchema,
 };
