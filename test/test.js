@@ -7,164 +7,6 @@ const {
   applyUpdate
 } = require('../src/server');
 
-describe('buildDiffUpdate', function() {
-  describe("simple", function() {
-    it("add", function() {
-      expect(buildDiffUpdate({}, { x: 2 })).to.eql({ x: 2 })
-    })
-
-    it("edit", function() {
-      expect(buildDiffUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 2 })
-    })
-
-    it("delete", function() {
-      expect(buildDiffUpdate({ x: 1 }, {})).to.eql({ x: null })
-    })
-  })
-
-  describe("array", function() {
-    //it("add", function() {
-    //  const exp = {
-    //    x: [0, 1]
-    //  };
-    //  expect(buildDiffUpdate({ x: [0] }, { x: [0, 1] })).to.eql(exp)
-    //})
-
-    //it("edit", function() {
-    //  const exp = {
-    //    x: {
-    //      0: 2
-    //    }
-    //  };
-    //  expect(buildDiffUpdate({ x: [] }, { x: [2] })).to.eql(exp)
-    //})
-
-    //it("delete", function() {
-    //  const exp = {
-    //    x: {
-    //      0: null
-    //    }
-    //  };
-    //  expect(buildDiffUpdate({ x: [1] }, { x: [] })).to.eql(exp)
-    //})
-  })
-});
-
-describe('applyUpdate', function() {
-  describe("simple", function() {
-    it("add", function() {
-      expect(applyUpdate({ x: 1 }, {})).to.eql({ x: 1 })
-    })
-
-    it("edit", function() {
-      expect(applyUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 1 })
-    })
-
-    it("delete", function() {
-      expect(applyUpdate({ x: null }, { x: 2 })).to.eql({})
-    })
-  })
-
-  describe("nested", function() {
-    it("add", function() {
-      expect(applyUpdate({ x: { y: 1 } }, {})).to.eql({ x: { y: 1 } })
-    })
-
-    it("edit", function() {
-      expect(applyUpdate({ x: { y: 2 } }, { x: { y: 1 } }))
-        .to.eql({ x: { y: 2 } })
-    })
-
-    it("delete inner", function() {
-      expect(applyUpdate({ x: { y: null } }, { x: { y: 1 } })).to.eql({})
-    })
-
-    it("delete outer", function() {
-      expect(applyUpdate({ x: null }, { x: { y: 1 } })).to.eql({})
-    })
-  })
-
-  //describe("arrays", function() {
-  //  it("add", function() {
-  //    expect(applyUpdate({ x: [1] }, {})).to.eql({ x: [1] })
-  //  })
-  //})
-})
-
-describe('diff', function() {
-  describe('objectDiff', function() {
-
-    it("both empty", function() {
-      expect(objectDiff({}, {}, [])).to.eql([])
-    })
-
-    it("a has 1 extra key", function() {
-      expect(objectDiff({ a: 1 }, {}, [])).to.eql([
-        {
-          type: 'delete',
-          path: [ 'a' ]
-        }
-      ])
-    })
-
-    it("b has 1 extra key", function() {
-      expect(objectDiff({}, { a: 1 }, [])).to.eql([
-        {
-          type: 'add',
-          path: [ 'a' ],
-          value: 1,
-        }
-      ])
-    })
-
-    it("add and delete", function() {
-      expect(objectDiff({ a: 1 }, { b: 2 }, [])).to.eql([
-        {
-          type: 'delete',
-          path: [ 'a' ],
-        },
-        {
-          type: 'add',
-          path: [ 'b' ],
-          value: 2
-        },
-      ]);
-    })
-
-    it("numerical value changed", function() {
-      expect(objectDiff({ a: 1 }, { a: 2 }, [])).to.eql([
-        {
-          type: 'change',
-          path: [ 'a' ],
-          value: 2,
-        }
-      ])
-    })
-
-    it("boolean value changed", function() {
-      expect(objectDiff({ a: true }, { a: false }, [])).to.eql([
-        {
-          type: 'change',
-          path: [ 'a' ],
-          value: false,
-        }
-      ])
-    })
-
-    //it("string value changed", function() {
-    //  expect(objectDiff({ a: 'a' }, { a: 'b' }, [])).to.eql([
-    //    {
-    //      type: 'change',
-    //      path: [ 'a' ],
-    //      value: 'b',
-    //    }
-    //  ])
-    //})
-
-    // TODO: different types
-  });
-});
-
 describe('buildUpdateSchema', function() {
   describe('no changes', function() {
 
@@ -286,4 +128,238 @@ describe('buildUpdateSchema', function() {
     })
   })
 })
+
+
+describe('applyUpdate', function() {
+  describe("simple", function() {
+    it("add", function() {
+      expect(applyUpdate({ x: 1 }, {})).to.eql({ x: 1 })
+    })
+
+    it("edit", function() {
+      expect(applyUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 1 })
+    })
+
+    it("delete", function() {
+      expect(applyUpdate({ x: null }, { x: 2 })).to.eql({})
+    })
+  })
+
+  describe("nested", function() {
+    it("add", function() {
+      expect(applyUpdate({ x: { y: 1 } }, {})).to.eql({ x: { y: 1 } })
+    })
+
+    it("edit", function() {
+      expect(applyUpdate({ x: { y: 2 } }, { x: { y: 1 } }))
+        .to.eql({ x: { y: 2 } })
+    })
+
+    it("delete inner", function() {
+      expect(applyUpdate({ x: { y: null } }, { x: { y: 1 } }))
+        .to.eql({ x: {} })
+    })
+
+    it("delete outer", function() {
+      expect(applyUpdate({ x: null }, { x: { y: 1 } })).to.eql({})
+    })
+  })
+
+  describe("arrays", function() {
+    it("add", function() {
+      expect(applyUpdate({ x: [1] }, {})).to.eql({ x: [1] })
+    })
+
+    // TODO: don't know how I feel about both of these next 2 working
+    it("edit array notation", function() {
+      expect(applyUpdate({ x: [2] }, { x: [1] })).to.eql({ x: [2] })
+    })
+    it("edit object notation", function() {
+      expect(applyUpdate({ x: { 0: 2 } }, { x: [1] })).to.eql({ x: [2] })
+    })
+
+    it("delete last element remove parents", function() {
+      expect(applyUpdate({ x: { 0: null } }, { x: [1] })).to.eql({ x: [] })
+    })
+
+    it("delete still has siblings", function() {
+      expect(applyUpdate({ x: { 0: null } }, { x: [1, 2] }))
+        .to.eql({ x: [2] })
+    })
+  })
+
+  // TODO: re-enable parent removal
+  //describe("parent removal", function() {
+  //  it("nested arrays", function() {
+  //    expect(applyUpdate({ x: { 0: { 0: null } } }, { x: [[1]] }))
+  //      .to.eql({ x: [[]] })
+  //  })
+  //})
+})
+
+
+describe('round trip', function() {
+
+  describe('simple', function() {
+    it('both empty', function() {
+      const a = {};
+      const b = {};
+      const update = buildUpdateSchema(a, b);
+      expect(applyUpdate(update, a)).to.eql(b)
+    })
+
+    it('add', function() {
+      const a = {};
+      const b = { x: 1 };
+      const update = buildUpdateSchema(a, b);
+      expect(applyUpdate(update, a)).to.eql(b)
+    })
+
+    it('edit', function() {
+      const a = { x: 1 };
+      const b = { x: 2 };
+      const update = buildUpdateSchema(a, b);
+      expect(applyUpdate(update, a)).to.eql(b)
+    })
+
+    it('delete', function() {
+      const a = { x: 1 };
+      const b = {};
+      const update = buildUpdateSchema(a, b);
+      expect(applyUpdate(update, a)).to.eql(b)
+    })
+  })
+
+  describe('nested', function() {
+    // TODO: handle when the user sets null explicitly. Probably need to use
+    // some sort of a special value to indicate deletion in the updates
+    //it('both empty', function() {
+    //  const a = { x: { y: 0 } };
+    //  const b = { x: null };
+    //  const update = buildUpdateSchema(a, b);
+    //  expect(applyUpdate(update, a)).to.eql(b)
+    //})
+  })
+})
+
+
+
+
+
+describe('diff', function() {
+  describe('objectDiff', function() {
+
+    it("both empty", function() {
+      expect(objectDiff({}, {}, [])).to.eql([])
+    })
+
+    it("a has 1 extra key", function() {
+      expect(objectDiff({ a: 1 }, {}, [])).to.eql([
+        {
+          type: 'delete',
+          path: [ 'a' ]
+        }
+      ])
+    })
+
+    it("b has 1 extra key", function() {
+      expect(objectDiff({}, { a: 1 }, [])).to.eql([
+        {
+          type: 'add',
+          path: [ 'a' ],
+          value: 1,
+        }
+      ])
+    })
+
+    it("add and delete", function() {
+      expect(objectDiff({ a: 1 }, { b: 2 }, [])).to.eql([
+        {
+          type: 'delete',
+          path: [ 'a' ],
+        },
+        {
+          type: 'add',
+          path: [ 'b' ],
+          value: 2
+        },
+      ]);
+    })
+
+    it("numerical value changed", function() {
+      expect(objectDiff({ a: 1 }, { a: 2 }, [])).to.eql([
+        {
+          type: 'change',
+          path: [ 'a' ],
+          value: 2,
+        }
+      ])
+    })
+
+    it("boolean value changed", function() {
+      expect(objectDiff({ a: true }, { a: false }, [])).to.eql([
+        {
+          type: 'change',
+          path: [ 'a' ],
+          value: false,
+        }
+      ])
+    })
+
+    //it("string value changed", function() {
+    //  expect(objectDiff({ a: 'a' }, { a: 'b' }, [])).to.eql([
+    //    {
+    //      type: 'change',
+    //      path: [ 'a' ],
+    //      value: 'b',
+    //    }
+    //  ])
+    //})
+
+    // TODO: different types
+  });
+});
+
+describe('buildDiffUpdate', function() {
+  describe("simple", function() {
+    it("add", function() {
+      expect(buildDiffUpdate({}, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("edit", function() {
+      expect(buildDiffUpdate({ x: 1 }, { x: 2 })).to.eql({ x: 2 })
+    })
+
+    it("delete", function() {
+      expect(buildDiffUpdate({ x: 1 }, {})).to.eql({ x: null })
+    })
+  })
+
+  describe("array", function() {
+    //it("add", function() {
+    //  const exp = {
+    //    x: [0, 1]
+    //  };
+    //  expect(buildDiffUpdate({ x: [0] }, { x: [0, 1] })).to.eql(exp)
+    //})
+
+    //it("edit", function() {
+    //  const exp = {
+    //    x: {
+    //      0: 2
+    //    }
+    //  };
+    //  expect(buildDiffUpdate({ x: [] }, { x: [2] })).to.eql(exp)
+    //})
+
+    //it("delete", function() {
+    //  const exp = {
+    //    x: {
+    //      0: null
+    //    }
+    //  };
+    //  expect(buildDiffUpdate({ x: [1] }, { x: [] })).to.eql(exp)
+    //})
+  })
+});
 

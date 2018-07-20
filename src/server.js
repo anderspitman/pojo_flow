@@ -216,17 +216,29 @@ function applyUpdate(update, obj, parent, parentKey) {
   for (let key in update) {
     // TODO: wat: typeof null === 'object'??
     if (typeof update[key] !== 'object' || update[key] === null) {
-      //console.log(update, obj, key);
-      if (update[key] === null) {
-        delete obj[key];
 
+      if (update[key] === null) {
+        if (obj instanceof Array) {
+          obj.splice(key, 1);
+        }
+        else {
+          delete obj[key];
+        }
+
+        // TODO: re-enable parent removal
         // if this object is now empty from the previous removal, remove it
         // from its parent
-        if (parent !== undefined && parentKey !== undefined) {
-          if (Object.keys(obj).length === 0) {
-            delete parent[parentKey];
-          }
-        }
+        //if (parent !== undefined && parentKey !== undefined) {
+        //  if (Object.keys(obj).length === 0) {
+        //    //if (parent instanceof Array) {
+        //    //  throw "I think this is needed but currently untested";
+        //    //  parent.splice(parentKey, 1);
+        //    //}
+        //    //else {
+        //      delete parent[parentKey];
+        //    //}
+        //  }
+        //}
       }
       else {
         obj[key] = update[key];
@@ -234,7 +246,12 @@ function applyUpdate(update, obj, parent, parentKey) {
     }
     else {
       if (obj[key] === undefined) {
-        obj[key] = {};
+        if (update[key] instanceof Array) {
+          obj[key] = [];
+        }
+        else {
+          obj[key] = {};
+        }
       }
       applyUpdate(update[key], obj[key], obj, key);
     }
