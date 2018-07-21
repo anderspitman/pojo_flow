@@ -1,3 +1,6 @@
+const { applyUpdate } = require('./common');
+const { deepCopy } = require('./common');
+
 class PojoFlowClient {
   constructor(options = {}) {
 
@@ -20,6 +23,8 @@ class PojoFlowClient {
 
     this._ws = new WebSocket(websocketString);
     this._ws.onmessage = this._onMessage.bind(this);
+
+    this._prevData = {};
   }
 
   waitForFirstUpdate() {
@@ -44,8 +49,13 @@ class PojoFlowClient {
 
   _onMessage(message) {
     if (this._onUpdateCallback !== undefined) {
-      const payload = JSON.parse(message.data);
-      this._onUpdateCallback(payload);
+      const update = JSON.parse(message.data);
+
+      const newData = applyUpdate(update, this._prevData);
+      this._onUpdateCallback(newData);
+      //this._onUpdateCallback(update);
+
+      this._prevData = deepCopy(newData);
     }
   }
 }

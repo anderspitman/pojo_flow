@@ -2,6 +2,8 @@ const WebSocket = require('ws');
 
 const deepDiff = require('deep-diff');
 
+const { deepCopy } = require('./common');
+
 let i = 0;
 
 class PojoFlowServer {
@@ -14,6 +16,7 @@ class PojoFlowServer {
 
     this._prevData = {};
     this._clients = {};
+    this._nextClientId = 0;
   }
 
   onNewClient(callback) {
@@ -26,27 +29,34 @@ class PojoFlowServer {
 
   update(newData) {
 
-    const diff = deepDiff(this._prevData, newData, []);
-    const updateList = buildUpdateList(diff);
-    const update = buildUpdate(diff);
+    //const diff = deepDiff(this._prevData, newData, []);
+    //const updateList = buildUpdateList(diff);
+    //const update = buildUpdate(diff);
     const updateSchema = buildUpdateSchema(this._prevData, newData);
     
-    if (i % 10 === 0) {
-      printObj(update);
-      printObj(updateSchema);
-      console.log(
-        JSON.stringify(newData).length,
-        JSON.stringify(diff).length,
-        JSON.stringify(updateList).length,
-        JSON.stringify(update).length,
-        JSON.stringify(updateSchema).length,
-      );
-    }
+    //if (i % 10 === 0) {
+    //  printObj(update);
+    //  printObj(updateSchema);
+    //  console.log(
+    //    JSON.stringify(newData).length,
+    //    JSON.stringify(diff).length,
+    //    JSON.stringify(updateList).length,
+    //    JSON.stringify(update).length,
+    //    JSON.stringify(updateSchema).length,
+    //  );
+    //}
     i++;
 
-    this._wss.clients.forEach(function(client) {
+
+    this._wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(newData));
+        if (this._clients[client._pjfClientId].needsFullState) {
+          client.send(JSON.stringify(newData));
+          this._clients[client._pjfClientId].needsFullState = false;
+        }
+        else {
+          client.send(JSON.stringify(updateSchema));
+        }
       }
     });
 
@@ -55,14 +65,22 @@ class PojoFlowServer {
 
   _onNewClient(ws) {
 
+    ws._pjfClientId = this._nextClientId;
+    this._nextClientId++;
+
+    this._clients[ws._pjfClientId] = {
+      websocket: ws,
+      needsFullState: true,
+    };
+
+    ws.onclose = () => {
+      delete this._clients[ws._pjfClientId];
+    };
+
     if (this._onNewClientCallback) {
       this._onNewClientCallback();
     }
   }
-}
-
-function deepCopy(obj) {
-  return JSON.parse(JSON.stringify(obj));
 }
 
 function buildUpdateList(diff) {
@@ -210,55 +228,6 @@ function isPrimitiveType(valueType) {
     valueType === 'boolean';
 }
 
-function applyUpdate(update, obj, parent, parentKey) {
-  //console.log(update, obj);
-
-  for (let key in update) {
-    // TODO: wat: typeof null === 'object'??
-    if (typeof update[key] !== 'object' || update[key] === null) {
-
-      if (update[key] === null) {
-        if (obj instanceof Array) {
-          obj.splice(key, 1);
-        }
-        else {
-          delete obj[key];
-        }
-
-        // TODO: re-enable parent removal
-        // if this object is now empty from the previous removal, remove it
-        // from its parent
-        //if (parent !== undefined && parentKey !== undefined) {
-        //  if (Object.keys(obj).length === 0) {
-        //    //if (parent instanceof Array) {
-        //    //  throw "I think this is needed but currently untested";
-        //    //  parent.splice(parentKey, 1);
-        //    //}
-        //    //else {
-        //      delete parent[parentKey];
-        //    //}
-        //  }
-        //}
-      }
-      else {
-        obj[key] = update[key];
-      }
-    }
-    else {
-      if (obj[key] === undefined) {
-        if (update[key] instanceof Array) {
-          obj[key] = [];
-        }
-        else {
-          obj[key] = {};
-        }
-      }
-      applyUpdate(update[key], obj[key], obj, key);
-    }
-  }
-
-  return obj;
-}
 
 function setValue(obj, path, value) {
   const key = path[0];
@@ -286,6 +255,5 @@ module.exports = {
   PojoFlowServer,
   buildUpdate,
   buildDiffUpdate,
-  applyUpdate,
   buildUpdateSchema,
 };

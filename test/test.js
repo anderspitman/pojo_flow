@@ -1,11 +1,9 @@
 const assert = require('assert');
 const { expect } = require('chai');
 const { objectDiff } = require('../src/diff');
-const {
-  buildDiffUpdate,
-  buildUpdateSchema,
-  applyUpdate
-} = require('../src/server');
+const { buildDiffUpdate, buildUpdateSchema } = require('../src/server');
+const { applyUpdate } = require('../src/common');
+
 
 describe('buildUpdateSchema', function() {
   describe('no changes', function() {
