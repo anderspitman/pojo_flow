@@ -1,10 +1,7 @@
 const WebSocket = require('ws');
 
-const deepDiff = require('deep-diff');
-
 const { deepCopy } = require('./common');
 
-let i = 0;
 
 class PojoFlowServer {
   constructor() {
@@ -29,25 +26,8 @@ class PojoFlowServer {
 
   update(newData) {
 
-    //const diff = deepDiff(this._prevData, newData, []);
-    //const updateList = buildUpdateList(diff);
-    //const update = buildUpdate(diff);
     const updateSchema = buildUpdateSchema(this._prevData, newData);
     
-    //if (i % 10 === 0) {
-    //  printObj(update);
-    //  printObj(updateSchema);
-    //  console.log(
-    //    JSON.stringify(newData).length,
-    //    JSON.stringify(diff).length,
-    //    JSON.stringify(updateList).length,
-    //    JSON.stringify(update).length,
-    //    JSON.stringify(updateSchema).length,
-    //  );
-    //}
-    i++;
-
-
     this._wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         if (this._clients[client._pjfClientId].needsFullState) {
@@ -81,96 +61,6 @@ class PojoFlowServer {
       this._onNewClientCallback();
     }
   }
-}
-
-function buildUpdateList(diff) {
-
-  const updateList = [];
-
-  for (let change of diff) {
-    switch(change.kind) {
-      case 'E':
-        updateList.push({
-          t: 'E',
-          p: change.path,
-          v: change.rhs,
-        });
-        break;
-      case 'D':
-        updateList.push({
-          t: 'D',
-          p: change.path,
-        });
-        break;
-      case 'A':
-        updateList.push({
-          t: 'A',
-          p: change.path,
-          i: change.index,
-          // TODO: account for nested rhs
-          v: change.item,
-        });
-        break;
-      case 'N':
-        updateList.push({
-          t: 'N',
-          p: change.path,
-          v: change.rhs,
-        });
-        break;
-      default:
-        throw "Invalid change kind " + change.kind;
-        break;
-    }
-  }
-
-  return updateList;
-}
-
-function buildDiffUpdate(a, b) {
-  const diff = deepDiff(a, b);
-  return buildUpdate(diff);
-}
-
-function buildUpdate(diff, parentPath) {
-  const update = {};
-
-  for (let change of diff) {
-
-    let path;
-    if (change.path !== undefined) {
-      path = change.path;
-    }
-    else if (parentPath !== undefined ) {
-      path = parentPath;
-    }
-    else {
-      throw "Invalid path";
-    }
-
-    switch(change.kind) {
-      case 'E':
-        setValue(update, path, change.rhs);
-        break;
-      case 'D':
-        setValue(update, path, null);
-        break;
-      case 'A':
-        const subChange = buildUpdate([change.item], [change.index]);
-
-        //printObj(subChange);
-        setValue(update, path, subChange);
-        break;
-      case 'N':
-        setValue(update, path, change.rhs);
-        break;
-      default:
-        throw "Invalid change kind " + change.kind;
-        break;
-    }
-  }
-
-  return update;
 }
 
 function buildUpdateSchema(a, b) {
@@ -222,38 +112,11 @@ function buildUpdateSchemaIter(a, b, update, path) {
   return update;
 }
 
-function isPrimitiveType(valueType) {
-  return valueType === 'number' ||
-    valueType === 'string' ||
-    valueType === 'boolean';
-}
-
-
-function setValue(obj, path, value) {
-  const key = path[0];
-
-  if (path.length === 1) {
-    obj[key] = value;
-    return;
-  }
-
-  if (obj[key] === undefined) {
-    obj[key] = {};
-  }
-
-  setValue(obj[key], path.slice(1), value);
-}
-
-function setArrayValue(obj, path, value) {
-}
-
 function printObj(obj) {
   console.log(JSON.stringify(obj, null, 2));
 }
 
 module.exports = {
   PojoFlowServer,
-  buildUpdate,
-  buildDiffUpdate,
   buildUpdateSchema,
 };
