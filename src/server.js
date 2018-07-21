@@ -1,8 +1,8 @@
 const WebSocket = require('ws');
 
-const { deepCopy } = require('./common');
+const { applyUpdate, deepCopy } = require('./common');
 const { compressToUint8Array } = require('lz-string');
-
+const deepDiff = require('deep-diff');
 
 class PojoFlowServer {
   constructor() {
@@ -26,16 +26,32 @@ class PojoFlowServer {
   }
 
   update(newData) {
-    
+
+    const updateSchema = buildUpdateSchema(this._prevData, newData);
+    const oldCopy = deepCopy(this._prevData);
+    const newCopy = deepCopy(newData);
+    const verifyUpdate = applyUpdate(updateSchema, oldCopy);
+    const diff = deepDiff(newCopy, verifyUpdate);
+
+    if (diff !== undefined) {
+      printObj(this._prevData);
+      printObj(newData);
+      printObj(updateSchema);
+      printObj(verifyUpdate);
+      printObj(diff);
+      throw "Update failed to construct same state";
+    }
+
     this._wss.clients.forEach((client) => {
+
       if (client.readyState === WebSocket.OPEN) {
+
         let data;
         if (this._clients[client._pjfClientId].needsFullState) {
           data = newData;
           this._clients[client._pjfClientId].needsFullState = false;
         }
         else {
-          const updateSchema = buildUpdateSchema(this._prevData, newData);
           data = updateSchema;
         }
 
