@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
 
 const { deepCopy } = require('./common');
+const { compressToUint8Array } = require('lz-string');
 
 
 class PojoFlowServer {
@@ -25,18 +26,23 @@ class PojoFlowServer {
   }
 
   update(newData) {
-
-    const updateSchema = buildUpdateSchema(this._prevData, newData);
     
     this._wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
+        let data;
         if (this._clients[client._pjfClientId].needsFullState) {
-          client.send(JSON.stringify(newData));
+          data = newData;
           this._clients[client._pjfClientId].needsFullState = false;
         }
         else {
-          client.send(JSON.stringify(updateSchema));
+          const updateSchema = buildUpdateSchema(this._prevData, newData);
+          data = updateSchema;
         }
+
+        const message = JSON.stringify(data);
+        const compressed = compressToUint8Array(message);
+        client.send(compressed);
+        //client.send(message);
       }
     });
 

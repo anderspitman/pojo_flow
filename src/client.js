@@ -1,5 +1,6 @@
 const { applyUpdate } = require('./common');
 const { deepCopy } = require('./common');
+const { decompressFromUint8Array } = require('lz-string');
 
 class PojoFlowClient {
   constructor(options = {}) {
@@ -22,6 +23,7 @@ class PojoFlowClient {
     const websocketString = "ws://" + hostname + ":" + websocketPort;
 
     this._ws = new WebSocket(websocketString);
+    this._ws.binaryType = 'arraybuffer';
     this._ws.onmessage = this._onMessage.bind(this);
 
     this._prevData = {};
@@ -49,11 +51,12 @@ class PojoFlowClient {
 
   _onMessage(message) {
     if (this._onUpdateCallback !== undefined) {
-      const update = JSON.parse(message.data);
-
+      const data = new Uint8Array(message.data);
+      const decompressed = decompressFromUint8Array(data);
+      const update = JSON.parse(decompressed);
+      //const update = JSON.parse(message.data);
       const newData = applyUpdate(update, this._prevData);
       this._onUpdateCallback(newData);
-      //this._onUpdateCallback(update);
 
       this._prevData = deepCopy(newData);
     }
