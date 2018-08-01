@@ -2,7 +2,6 @@ const WebSocket = require('ws');
 
 const { applyUpdate, deepCopy } = require('./common');
 const { compressToUint8Array } = require('lz-string');
-const deepDiff = require('deep-diff');
 const fs = require('fs');
 
 class PojoFlowServer {
@@ -34,7 +33,7 @@ class PojoFlowServer {
     const verifyUpdate = applyUpdate(updateSchema, oldCopy);
     const diff = deepDiff(newCopy, verifyUpdate);
 
-    if (diff !== undefined) {
+    if (diff) {
       dumpObj(this._prevData, 'prevData.json');
       dumpObj(newData, 'newData.json');
       dumpObj(updateSchema, 'updateSchema.json');
@@ -102,11 +101,12 @@ function buildUpdateSchemaIter(a, b, update, path) {
 
     const newPath = path.concat(key);
 
-    if (a[key] === undefined) {
+    if (a[key] === undefined || a[key] === null) {
       update[key] = b[key];
     }
     else {
       if (b[key] instanceof Array || b[key] instanceof Object) {
+        // TODO: shouldn't this be buildUpdateSchemaIter?
         const subUpdate = buildUpdateSchema(a[key], b[key], update, newPath);
 
         // check if empty
@@ -129,6 +129,7 @@ function buildUpdateSchemaIter(a, b, update, path) {
 
     if (b[key] === undefined) {
       //update[key] = null;
+      // TODO: is this correct?
       update[key] = '$D';
     }
   }
@@ -159,6 +160,10 @@ function verifyDiff(diff) {
     }
   }
   return true;
+}
+
+function deepDiff(a, b) {
+  return !(JSON.stringify(a) === JSON.stringify(b));
 }
 
 module.exports = {

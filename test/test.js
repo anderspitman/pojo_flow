@@ -124,6 +124,13 @@ describe('buildUpdateSchema', function() {
         .to.eql({ x: '$D' })
     })
   })
+
+  describe('null', function() {
+    it('null gets replaced by objects', function() {
+      expect(buildUpdateSchema({ x: null }, { x: { y: 1 } }))
+        .to.eql({ x: { y: 1 } });
+    })
+  })
 })
 
 
@@ -187,6 +194,17 @@ describe('applyUpdate', function() {
     it ("removing 2 elements at the same time works", function() {
       expect(applyUpdate({ x: { 0: '$D', 1: '$D'} }, { x: [1, 2] }))
         .to.eql({ x: [] })
+    })
+  })
+
+  describe('null', function() {
+    it('replaces values', function() {
+      expect(applyUpdate({ x: null }, { x: 1 })).to.eql({ x: null });
+    })
+
+    it('gets replaced by an object or array', function() {
+      expect(applyUpdate({ x: { y: 1 } }, { x: null }))
+        .to.eql({ x: { y: 1 } });
     })
   })
 
