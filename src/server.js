@@ -3,6 +3,7 @@ const WebSocket = require('ws');
 const { applyUpdate, deepCopy } = require('./common');
 const { compressToUint8Array } = require('lz-string');
 const deepDiff = require('deep-diff');
+const fs = require('fs');
 
 class PojoFlowServer {
   constructor() {
@@ -34,11 +35,11 @@ class PojoFlowServer {
     const diff = deepDiff(newCopy, verifyUpdate);
 
     if (diff !== undefined) {
-      printObj(this._prevData);
-      printObj(newData);
-      printObj(updateSchema);
-      printObj(verifyUpdate);
-      printObj(diff);
+      dumpObj(this._prevData, 'prevData.json');
+      dumpObj(newData, 'newData.json');
+      dumpObj(updateSchema, 'updateSchema.json');
+      dumpObj(verifyUpdate, 'verifyUpdate.json');
+      dumpObj(diff, 'diff.json');
       throw "Update failed to construct same state";
     }
 
@@ -127,15 +128,37 @@ function buildUpdateSchemaIter(a, b, update, path) {
     const newPath = path.concat(key);
 
     if (b[key] === undefined) {
-      update[key] = null;
+      //update[key] = null;
+      update[key] = '$D';
     }
   }
 
   return update;
 }
 
+function dumpObj(obj, filepath) {
+  const str = JSON.stringify(obj, null, 2);
+  fs.writeFileSync(filepath, str);  
+}
+
 function printObj(obj) {
   console.log(JSON.stringify(obj, null, 2));
+}
+
+function verifyDiff(diff) {
+  if (diff !== undefined) {
+    for (let d of diff) {
+      if (d.kind === 'A') {
+        if (d.item.rhs !== '$D') {
+          return false;
+        }
+      }
+      else {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 module.exports = {

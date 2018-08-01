@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/anderspitman/pojo_flow#readme",
   "dependencies": {
+    "deep-diff": "^1.0.1",
     "lz-string": "^1.4.4",
     "ws": "^5.2.2"
   },

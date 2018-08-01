@@ -1,16 +1,21 @@
 function applyUpdate(update, obj, parent, parentKey) {
-  //console.log(update, obj);
 
   for (let key in update) {
+    if (obj[key] === '$D') {
+      obj[key] = update[key];
+    }
     // TODO: wat: typeof null === 'object'??
-    if (typeof update[key] !== 'object' || update[key] === null) {
+    else if (typeof update[key] !== 'object' || update[key] === '$D') {
 
-      if (update[key] === null) {
+      if (update[key] === '$D') {
         if (obj instanceof Array) {
-          obj.splice(key, 1);
+          // mark element for deletion. Can't delete it here because it
+          // might shift other elements that need to be modified/deleted.
+          obj[key] = '$D';
         }
         else {
           delete obj[key];
+          //obj[key] = '$D';
         }
 
         // TODO: re-enable parent removal
@@ -42,6 +47,17 @@ function applyUpdate(update, obj, parent, parentKey) {
         }
       }
       applyUpdate(update[key], obj[key], obj, key);
+    }
+  }
+
+  // if obj is an array, remove all elements that were marked for deletion
+  // above. Go in reverse order because we're modifying it in-place and
+  // don't want to shift anything as we go through.
+  if (obj instanceof Array) {
+    for (let i = obj.length - 1; i >= 0; i--) {
+      if (obj[i] === '$D') {
+        obj.splice(i, 1);
+      }
     }
   }
 

@@ -43,7 +43,7 @@ describe('buildUpdateSchema', function() {
     })
 
     it("delete", function() {
-      expect(buildUpdateSchema({ x: 1 }, {})).to.eql({ x: null })
+      expect(buildUpdateSchema({ x: 1 }, {})).to.eql({ x: '$D'})
     })
   })
 
@@ -61,7 +61,7 @@ describe('buildUpdateSchema', function() {
 
     it("delete", function() {
       expect(buildUpdateSchema({ x: 1, y: 2 }, { x: 1 }))
-        .to.eql({ y: null })
+        .to.eql({ y: '$D'})
     })
   })
 
@@ -86,16 +86,16 @@ describe('buildUpdateSchema', function() {
     })
 
     it("delete empty", function() {
-      expect(buildUpdateSchema({ x: [] }, {})).to.eql({ x: null })
+      expect(buildUpdateSchema({ x: [] }, {})).to.eql({ x: '$D' })
     })
 
     it("delete with value", function() {
-      expect(buildUpdateSchema({ x: [1] }, {})).to.eql({ x: null })
+      expect(buildUpdateSchema({ x: [1] }, {})).to.eql({ x: '$D' })
     })
 
     it("delete value", function() {
       expect(buildUpdateSchema({ x: [1] }, { x: [] }))
-        .to.eql({ x: { 0: null } })
+        .to.eql({ x: { 0: '$D' } })
     })
   })
 
@@ -116,12 +116,12 @@ describe('buildUpdateSchema', function() {
 
     it("delete inner", function() {
       expect(buildUpdateSchema({ x: { y: 1 } }, { x: {} }))
-        .to.eql({ x: { y: null } })
+        .to.eql({ x: { y: '$D' } })
     })
 
     it("delete outer", function() {
       expect(buildUpdateSchema({ x: { y: 1 } }, {}))
-        .to.eql({ x: null })
+        .to.eql({ x: '$D' })
     })
   })
 })
@@ -138,7 +138,7 @@ describe('applyUpdate', function() {
     })
 
     it("delete", function() {
-      expect(applyUpdate({ x: null }, { x: 2 })).to.eql({})
+      expect(applyUpdate({ x: '$D' }, { x: 2 })).to.eql({})
     })
   })
 
@@ -153,12 +153,12 @@ describe('applyUpdate', function() {
     })
 
     it("delete inner", function() {
-      expect(applyUpdate({ x: { y: null } }, { x: { y: 1 } }))
+      expect(applyUpdate({ x: { y: '$D' } }, { x: { y: 1 } }))
         .to.eql({ x: {} })
     })
 
     it("delete outer", function() {
-      expect(applyUpdate({ x: null }, { x: { y: 1 } })).to.eql({})
+      expect(applyUpdate({ x: '$D' }, { x: { y: 1 } })).to.eql({})
     })
   })
 
@@ -176,12 +176,17 @@ describe('applyUpdate', function() {
     })
 
     it("delete last element remove parents", function() {
-      expect(applyUpdate({ x: { 0: null } }, { x: [1] })).to.eql({ x: [] })
+      expect(applyUpdate({ x: { 0: '$D' } }, { x: [1] })).to.eql({ x: [] })
     })
 
     it("delete still has siblings", function() {
-      expect(applyUpdate({ x: { 0: null } }, { x: [1, 2] }))
+      expect(applyUpdate({ x: { 0: '$D'} }, { x: [1, 2] }))
         .to.eql({ x: [2] })
+    })
+
+    it ("removing 2 elements at the same time works", function() {
+      expect(applyUpdate({ x: { 0: '$D', 1: '$D'} }, { x: [1, 2] }))
+        .to.eql({ x: [] })
     })
   })
 
