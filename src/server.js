@@ -33,6 +33,10 @@ class PojoFlowServer {
     const verifyUpdate = applyUpdate(updateSchema, oldCopy);
     const diff = deepDiff(newCopy, verifyUpdate);
 
+    const fullLen = JSON.stringify(newData).length;
+    const deltaLen = JSON.stringify(updateSchema).length;
+    console.log(`Full: ${fullLen}, Delta: ${deltaLen}`);
+
     if (diff) {
       dumpObj(this._prevData, 'prevData.json');
       dumpObj(newData, 'newData.json');
