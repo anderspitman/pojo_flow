@@ -3,6 +3,7 @@ const WebSocket = require('ws');
 const { applyUpdate, deepCopy } = require('./common');
 const { compressToUint8Array } = require('lz-string');
 const fs = require('fs');
+const stringify = require('json-stable-stringify');
 
 class PojoFlowServer {
   constructor() {
@@ -167,7 +168,7 @@ function verifyDiff(diff) {
 }
 
 function deepDiff(a, b) {
-  return !(JSON.stringify(a) === JSON.stringify(b));
+  return !(stringify(a) === stringify(b));
 }
 
 module.exports = {
